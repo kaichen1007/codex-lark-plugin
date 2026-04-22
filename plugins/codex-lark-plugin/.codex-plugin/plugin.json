@@ -5,8 +5,10 @@
   "author": {
     "name": "chenkai",
     "email": "",
-    "url": ""
+    "url": "https://github.com/cKnight107"
   },
+  "homepage": "https://github.com/cKnight107/codex-lark-plugin",
+  "repository": "https://github.com/cKnight107/codex-lark-plugin.git",
   "license": "MIT",
   "keywords": [
     "feishu",
@@ -32,6 +34,11 @@
       "Compare how a team document changed between two updates"
     ],
     "brandColor": "#0F766E",
+    "websiteURL": "https://github.com/cKnight107/codex-lark-plugin",
+    "privacyPolicyURL": "[TODO: privacy-policy-url]",
+    "termsOfServiceURL": "[TODO: terms-of-service-url]",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
     "screenshots": []
   }
 }
