@@ -1,12 +1,39 @@
 import { loadFixture } from "./fixture-client.js";
 import { createFeishuClient } from "./feishu-client.js";
 import { loadFeishuDocuments } from "./feishu-docs-source.js";
+import {
+  readPersistedUserToken,
+  resolveUserTokenPath,
+  writePersistedUserToken
+} from "./oauth-user-token.js";
 
 const supportedSourceTypes = new Set(["sample", "feishu"]);
 const supportedRootTypes = new Set(["folder", "wiki"]);
+const supportedTokenModes = new Set(["tenant", "user"]);
 
 function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNumber(value) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+function normalizeTokenMode(value) {
+  const tokenMode = normalizeText(value || "tenant").toLowerCase();
+
+  if (!supportedTokenModes.has(tokenMode)) {
+    throw new Error(
+      `LARK_FEISHU_TOKEN_MODE 仅支持 tenant 或 user，当前收到: ${value}`
+    );
+  }
+
+  return tokenMode;
 }
 
 function normalizeSourceType(value) {
@@ -89,18 +116,40 @@ export function resolveDataSourceConfig(options = {}, env = process.env) {
   const appSecret = normalizeText(
     options.appSecret ?? env.LARK_FEISHU_APP_SECRET
   );
+  const tokenMode = normalizeTokenMode(
+    options.tokenMode ?? env.LARK_FEISHU_TOKEN_MODE ?? "tenant"
+  );
   const syncRoots = parseSyncRoots(
     options.syncRoots ?? env.LARK_FEISHU_SYNC_ROOTS
+  );
+  const userAccessToken = normalizeText(
+    options.userAccessToken ?? env.LARK_FEISHU_USER_ACCESS_TOKEN
+  );
+  const userRefreshToken = normalizeText(
+    options.userRefreshToken ?? env.LARK_FEISHU_USER_REFRESH_TOKEN
+  );
+  const userTokenPath = normalizeText(
+    options.userTokenPath ?? env.LARK_FEISHU_USER_TOKEN_PATH
+  );
+  const userAccessTokenExpiresAt = normalizeNumber(
+    options.userAccessTokenExpiresAt ??
+      env.LARK_FEISHU_USER_ACCESS_TOKEN_EXPIRES_AT
+  );
+  const userRefreshTokenExpiresAt = normalizeNumber(
+    options.userRefreshTokenExpiresAt ??
+      env.LARK_FEISHU_USER_REFRESH_TOKEN_EXPIRES_AT
   );
 
   const missingFields = [];
 
-  if (!appId) {
-    missingFields.push("LARK_FEISHU_APP_ID");
-  }
+  if (tokenMode === "tenant") {
+    if (!appId) {
+      missingFields.push("LARK_FEISHU_APP_ID");
+    }
 
-  if (!appSecret) {
-    missingFields.push("LARK_FEISHU_APP_SECRET");
+    if (!appSecret) {
+      missingFields.push("LARK_FEISHU_APP_SECRET");
+    }
   }
 
   if (missingFields.length > 0) {
@@ -113,7 +162,13 @@ export function resolveDataSourceConfig(options = {}, env = process.env) {
     sourceType,
     appId,
     appSecret,
-    syncRoots
+    syncRoots,
+    tokenMode,
+    userAccessToken,
+    userRefreshToken,
+    userAccessTokenExpiresAt,
+    userRefreshTokenExpiresAt,
+    userTokenPath
   };
 }
 
@@ -132,6 +187,27 @@ export async function loadDocumentSource(options = {}, env = process.env) {
     };
   }
 
+  const persistedUserToken =
+    config.tokenMode === "user"
+      ? await readPersistedUserToken(config.userTokenPath)
+      : null;
+  const userClientConfig =
+    config.tokenMode === "user"
+      ? {
+          ...persistedUserToken,
+          userAccessToken:
+            config.userAccessToken || persistedUserToken?.userAccessToken,
+          userRefreshToken:
+            config.userRefreshToken || persistedUserToken?.userRefreshToken,
+          userAccessTokenExpiresAt:
+            config.userAccessTokenExpiresAt ??
+            persistedUserToken?.userAccessTokenExpiresAt,
+          userRefreshTokenExpiresAt:
+            config.userRefreshTokenExpiresAt ??
+            persistedUserToken?.userRefreshTokenExpiresAt
+        }
+      : {};
+
   const [catalogs, documents] = await Promise.all([
     loadFixture({
       fixturePath: options.fixturePath ?? env.LARK_DOCS_FIXTURE
@@ -139,16 +215,37 @@ export async function loadDocumentSource(options = {}, env = process.env) {
     loadFeishuDocuments({
       client:
         options.feishuClient ??
-        createFeishuClient(config, {
-          fetchImpl: options.fetchImpl,
-          baseUrl: options.baseUrl
-        }),
+        createFeishuClient(
+          {
+            ...config,
+            ...userClientConfig
+          },
+          {
+            fetchImpl: options.fetchImpl,
+            baseUrl: options.baseUrl,
+            onUserTokenUpdate:
+              config.tokenMode === "user"
+                ? (token) =>
+                    writePersistedUserToken(
+                      resolveUserTokenPath(config.userTokenPath),
+                      token
+                    )
+                : undefined
+          }
+        ),
       syncRoots: config.syncRoots
     })
   ]);
 
   return {
     sourceType: "feishu",
+    appId: config.appId,
+    syncRoots: config.syncRoots,
+    tokenMode: config.tokenMode,
+    userTokenPath:
+      config.tokenMode === "user"
+        ? resolveUserTokenPath(config.userTokenPath)
+        : "",
     projects: catalogs.projects ?? [],
     docTypes: catalogs.docTypes ?? [],
     documents

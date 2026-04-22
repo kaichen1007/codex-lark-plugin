@@ -7,12 +7,16 @@ import { ensureIndex } from "./lib/index-store.js";
 import { executeTool } from "./lib/knowledge-tools.js";
 
 const requiredEnvKeys = [
-  "LARK_FEISHU_APP_ID",
-  "LARK_FEISHU_APP_SECRET",
   "LARK_FEISHU_SYNC_ROOTS"
 ];
 
 process.env.LARK_DOCS_SOURCE ??= "feishu";
+process.env.LARK_FEISHU_TOKEN_MODE ??= "tenant";
+
+if (process.env.LARK_FEISHU_TOKEN_MODE === "tenant") {
+  requiredEnvKeys.unshift("LARK_FEISHU_APP_SECRET");
+  requiredEnvKeys.unshift("LARK_FEISHU_APP_ID");
+}
 
 const missingKeys = requiredEnvKeys.filter((key) => !process.env[key]?.trim());
 

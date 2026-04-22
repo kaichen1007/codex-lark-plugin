@@ -197,3 +197,125 @@ test("响应缺少 token 字段时会立即失败", async () => {
     /tenant_access_token 响应缺少必要字段/
   );
 });
+
+test("user_access_token 模式会直接使用用户 token 发起请求", async () => {
+  const requests = [];
+  const client = createFeishuClient(
+    {
+      tokenMode: "user",
+      userAccessToken: "u_static"
+    },
+    {
+      fetchImpl: async (url, init) => {
+        requests.push({
+          url: String(url),
+          method: init.method,
+          headers: init.headers,
+          body: init.body
+        });
+
+        return createJsonResponse(200, {
+          code: 0,
+          msg: "ok",
+          data: {
+            files: [{ token: "dox_user" }]
+          }
+        });
+      }
+    }
+  );
+
+  const response = await client.request("drive/v1/files", {
+    searchParams: {
+      folder_token: "fldcn_user"
+    }
+  });
+
+  assert.equal(response.data.files[0].token, "dox_user");
+  assert.equal(requests.length, 1);
+  assert.equal(
+    requests[0].headers.Authorization,
+    "Bearer u_static"
+  );
+  assert.equal(
+    requests[0].url,
+    "https://open.feishu.cn/open-apis/drive/v1/files?folder_token=fldcn_user"
+  );
+});
+
+test("user_access_token 过期后会使用 refresh_token 刷新", async () => {
+  const requests = [];
+  const updatedTokens = [];
+  const client = createFeishuClient(
+    {
+      appId: "cli_test",
+      appSecret: "secret_test",
+      tokenMode: "user",
+      userAccessToken: "u_expired",
+      userAccessTokenExpiresAt: 1,
+      userRefreshToken: "ur_refresh"
+    },
+    {
+      now: () => 10_000,
+      onUserTokenUpdate(token) {
+        updatedTokens.push(token);
+      },
+      fetchImpl: async (url, init) => {
+        requests.push({
+          url: String(url),
+          method: init.method,
+          headers: init.headers,
+          body: init.body
+        });
+
+        if (String(url).includes("app_access_token/internal")) {
+          return createJsonResponse(200, {
+            code: 0,
+            msg: "ok",
+            app_access_token: "a_refresh",
+            expire: 7200
+          });
+        }
+
+        if (String(url).includes("authen/v1/refresh_access_token")) {
+          return createJsonResponse(200, {
+            code: 0,
+            msg: "ok",
+            data: {
+              access_token: "u_fresh",
+              refresh_token: "ur_fresh",
+              expires_in: 6900,
+              refresh_expires_in: 2592000
+            }
+          });
+        }
+
+        return createJsonResponse(200, {
+          code: 0,
+          msg: "ok",
+          data: {
+            files: [{ token: "dox_after_refresh" }]
+          }
+        });
+      }
+    }
+  );
+
+  const response = await client.request("drive/v1/files", {
+    searchParams: {
+      folder_token: "fldcn_refresh"
+    }
+  });
+
+  assert.equal(response.data.files[0].token, "dox_after_refresh");
+  assert.equal(requests.length, 3);
+  assert.match(requests[1].body, /"grant_type":"refresh_token"/);
+  assert.match(requests[1].body, /"refresh_token":"ur_refresh"/);
+  assert.equal(
+    requests[2].headers.Authorization,
+    "Bearer u_fresh"
+  );
+  assert.equal(updatedTokens.length, 1);
+  assert.equal(updatedTokens[0].userAccessToken, "u_fresh");
+  assert.equal(updatedTokens[0].userRefreshToken, "ur_fresh");
+});

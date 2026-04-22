@@ -18,6 +18,8 @@ function buildSourceState(config) {
   return {
     sourceType: "feishu",
     appId: config.appId,
+    tokenMode: config.tokenMode ?? "tenant",
+    userTokenPath: config.userTokenPath ?? "",
     syncRoots: [...(config.syncRoots ?? [])].map((entry) => ({
       type: entry.type,
       token: entry.token
@@ -128,7 +130,9 @@ export function buildIndex(sourceData, options = {}) {
       sourceType: sourceData.sourceType ?? "sample",
       fixturePath: sourceData.fixturePath,
       appId: sourceData.appId,
-      syncRoots: sourceData.syncRoots
+      syncRoots: sourceData.syncRoots,
+      tokenMode: sourceData.tokenMode,
+      userTokenPath: sourceData.userTokenPath
     });
   const documents = (sourceData.documents ?? [])
     .map((document) => {

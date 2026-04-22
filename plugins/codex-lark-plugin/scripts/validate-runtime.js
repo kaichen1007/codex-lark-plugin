@@ -22,7 +22,8 @@ const summary = {
   mcpServers: Object.keys(mcpConfig.mcpServers ?? {}),
   documentCount: index.documents.length,
   sourceType: index.source_type,
-  mcpDefaultSourceType: serverEnv.LARK_DOCS_SOURCE ?? "sample"
+  mcpDefaultSourceType: serverEnv.LARK_DOCS_SOURCE ?? "sample",
+  mcpDefaultTokenMode: serverEnv.LARK_FEISHU_TOKEN_MODE ?? "tenant"
 };
 
 if (summary.registeredTools.length !== 5) {
@@ -39,7 +40,13 @@ for (const key of [
   "LARK_INDEX_PATH",
   "LARK_FEISHU_APP_ID",
   "LARK_FEISHU_APP_SECRET",
-  "LARK_FEISHU_SYNC_ROOTS"
+  "LARK_FEISHU_SYNC_ROOTS",
+  "LARK_FEISHU_TOKEN_MODE",
+  "LARK_FEISHU_USER_ACCESS_TOKEN",
+  "LARK_FEISHU_USER_REFRESH_TOKEN",
+  "LARK_FEISHU_USER_TOKEN_PATH",
+  "LARK_FEISHU_OAUTH_REDIRECT_URI",
+  "LARK_FEISHU_OAUTH_SCOPE"
 ]) {
   if (!(key in serverEnv)) {
     throw new Error(`插件 .mcp.json 缺少 ${key} 配置模板。`);

@@ -11,7 +11,13 @@
         "LARK_INDEX_PATH": "./data/index.json",
         "LARK_FEISHU_APP_ID": "replace-with-app-id",
         "LARK_FEISHU_APP_SECRET": "replace-with-app-secret",
-        "LARK_FEISHU_SYNC_ROOTS": "[{\"type\":\"folder\",\"token\":\"replace-with-root-token\"}]"
+        "LARK_FEISHU_SYNC_ROOTS": "[{\"type\":\"folder\",\"token\":\"replace-with-root-token\"}]",
+        "LARK_FEISHU_TOKEN_MODE": "tenant",
+        "LARK_FEISHU_USER_ACCESS_TOKEN": "",
+        "LARK_FEISHU_USER_REFRESH_TOKEN": "",
+        "LARK_FEISHU_USER_TOKEN_PATH": "",
+        "LARK_FEISHU_OAUTH_REDIRECT_URI": "http://127.0.0.1:3333/callback",
+        "LARK_FEISHU_OAUTH_SCOPE": "offline_access drive:drive:readonly space:document:retrieve"
       }
     }
   }

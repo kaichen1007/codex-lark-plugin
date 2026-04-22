@@ -12,6 +12,8 @@
   - 根据当前数据源配置刷新本地索引，支持 `sample` 与 `feishu`
 - `sync-feishu.js`
   - 显式触发真实飞书同步入口，要求 `LARK_DOCS_SOURCE=feishu`
+- `oauth-login.js`
+  - 启动本地 OAuth 回调服务，获取并落盘 `user_access_token`
 - `feishu-smoke.js`
   - 使用真实飞书配置做一次最小联通 smoke test
 - `lib/`

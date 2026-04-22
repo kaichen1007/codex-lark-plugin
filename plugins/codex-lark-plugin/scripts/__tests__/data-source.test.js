@@ -92,6 +92,24 @@ test("feishu 模式会解析同步根入口契约", () => {
   ]);
 });
 
+test("feishu user 模式在提供 user_access_token 时不强制要求 app 凭证", () => {
+  const config = resolveDataSourceConfig(
+    {
+      sourceType: "feishu",
+      tokenMode: "user",
+      userAccessToken: "u_static",
+      syncRoots: [{ type: "folder", token: "fldcn_root" }]
+    },
+    {}
+  );
+
+  assert.equal(config.sourceType, "feishu");
+  assert.equal(config.tokenMode, "user");
+  assert.equal(config.userAccessToken, "u_static");
+  assert.equal(config.appId, "");
+  assert.equal(config.appSecret, "");
+});
+
 test("非法数据源模式会快速报错", () => {
   assert.throws(
     () => resolveDataSourceConfig({ sourceType: "remote" }, {}),
